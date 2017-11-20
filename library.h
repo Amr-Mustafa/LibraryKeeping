@@ -51,6 +51,10 @@ typedef struct {
 
 }Member;
 
+
+/*
+ * Function prototypes.
+ */
 char* get_book_info(void);
 int insert_book(void);
 int initialize_book(Book*, char*);
