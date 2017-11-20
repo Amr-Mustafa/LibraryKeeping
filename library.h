@@ -1,0 +1,8 @@
+//
+// Created by Amr on 11/20/2017.
+//
+
+#ifndef LIBRARYKEEPING_LIBRARY_H
+#define LIBRARYKEEPING_LIBRARY_H
+
+#endif //LIBRARYKEEPING_LIBRARY_H
