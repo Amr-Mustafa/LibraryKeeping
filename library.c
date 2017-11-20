@@ -114,7 +114,7 @@ int insert_book (void) {
  *
  */
 
-char* get_book_info (void) {
+char* get_book_info (void) { 
 
     // allocate enough memory to store the book info string
     char* book_info = (char*) malloc(sizeof(char) * 150);
