@@ -51,6 +51,7 @@ typedef struct {
 
 }Member;
 
-char* get_book_info (void);
-int insert_book (void);
-
+char* get_book_info(void);
+int insert_book(void);
+int initialize_book(Book*, char*);
+int validate_book(Book*);
