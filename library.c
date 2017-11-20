@@ -8,6 +8,15 @@
  * --------------------
  * adds a new book to the library database file.
  *
+ * Steps for inserting a new book:
+ *  1. Open the database file.
+ *  2. Prompt the user for input.
+ *  3. Read the book information string.
+ *  4. Validate the book information.
+ *      4.1. Unique ISBN.
+ *  5. Store the book information string in the database file.
+ *  6. Close the database file.
+ *
  *  returns: EXIT_SUCCESS for success
  *           EXIT_FAILURE for failure
  *
@@ -15,8 +24,12 @@
 
 int insert_book (void) {
 
-    /* open the database file */
-    FILE* books_database = fopen("books.txt", "a");
+    /********************************/
+    /** 1. Open the database file. **/
+    /********************************/
+
+    /* open the database file in read/write mode */
+    FILE* books_database = fopen("books.txt", "r+");
 
     /* make sure database file is opened successfully */
     if (!books_database) {
@@ -24,10 +37,18 @@ int insert_book (void) {
         exit(EXIT_FAILURE);
     }
 
+    /***********************************/
+    /** 2. Prompt the user for input. **/
+    /***********************************/
+
     /* prompt the user for input */
     system("clear");
     puts("To insert a new book, please enter the book's information as shown in the example below:\n\
 (ex. C How to Program, Paul Deitel, Pearson Education. Inc, 0-13-612356-2, 29/10/2009, 5, 3, Programming)");
+
+    /******************************************/
+    /** 3. Read the book information string. **/
+    /******************************************/
 
     /* read user input */
     char* book_info = get_book_info();
@@ -37,6 +58,10 @@ int insert_book (void) {
         fprintf(stderr, "ERROR: Couldn't read the book info.\n");
         exit(EXIT_FAILURE);
     }
+
+    /******************************************/
+    /** 4. Validate book information string. **/
+    /******************************************/
 
     /* create a book structure to store the book info for further manipulation and validation */
     Book* book = (Book*) malloc(sizeof(Book));
@@ -55,11 +80,25 @@ int insert_book (void) {
     initialize_book(book, tk_book_info);
 
     /* validate the read book */
-    validate_book(book);
+    validate_book(book, books_database);
+
+    /****************************************************************/
+    /** 5. Store the book information string in the database file. **/
+    /****************************************************************/
 
     /* store book in database */
     if(!fputs(book_info, books_database)) {
         fprintf(stderr, "ERROR: Couldn't add the book.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /*********************************/
+    /** 6. Close the database file. **/
+    /*********************************/
+
+    /* close the database file */
+    if (fclose(books_database) == EOF) {
+        fprintf(stderr, "ERROR: Couldn't close the database.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -160,4 +199,15 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     return EXIT_SUCCESS;
+}
+
+int validate_book (Book* book, FILE* books_database) {
+
+    char book_info[150];
+
+    // get all books stored in the database
+    while (fgets(book_info, 150, books_database)) {
+        printf("%s\n", book_info);
+    }
+
 }
