@@ -2,6 +2,6 @@
 #include "library.h"
 
 int main() {
-    printf("Hello, World!\n");
+    insert_book();
     return 0;
 }

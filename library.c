@@ -114,7 +114,7 @@ int insert_book (void) {
  *
  */
 
-char* get_book_info (void) { 
+char* get_book_info (void) {
 
     // allocate enough memory to store the book info string
     char* book_info = (char*) malloc(sizeof(char) * 150);
@@ -205,9 +205,24 @@ int validate_book (Book* book, FILE* books_database) {
 
     char book_info[150];
 
+    Book book_d;
+
     // get all books stored in the database
     while (fgets(book_info, 150, books_database)) {
-        printf("%s\n", book_info);
+
+        // initialize the current book in the current iteration with the read book info string
+        initialize_book(&book_d, book_info);
+
+        // make sure the ISBN of the book to be validated in unique
+        if (book_d.ISBN == book->ISBN) {
+            fprintf(stderr, "ERROR: A book with the exact ISBN already exists.\n");
+
+            // return 1 for failure
+            return 1;
+        }
     }
+
+    // return 0 for success
+    return 0;
 
 }

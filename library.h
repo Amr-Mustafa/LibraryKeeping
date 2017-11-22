@@ -58,4 +58,4 @@ typedef struct {
 char* get_book_info(void);
 int insert_book(void);
 int initialize_book(Book*, char*);
-void validate_book(Book*, FILE*);
+int validate_book(Book*, FILE*);
