@@ -3,5 +3,5 @@ project(LibraryKeeping)
 
 set(CMAKE_C_STANDARD 11)
 
-set(SOURCE_FILES main.c library.h library.c)
-add_executable(LibraryKeeping ${SOURCE_FILES} library.h library.c)
+set(SOURCE_FILES main.c books.h books.c)
+add_executable(LibraryKeeping ${SOURCE_FILES} books.h books.c)

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "library.h"
+#include "books.h"
 
 /*
  * Function:  insert_book
@@ -201,7 +201,23 @@ int initialize_book (Book* book, char* book_info) {
     return EXIT_SUCCESS;
 }
 
+/*
+ * Function:  validate_book
+ * --------------------
+ * validates a given book.
+ *
+ *  returns: 0 on success
+ *           1 on failure
+ *
+ */
+
 int validate_book (Book* book, FILE* books_database) {
+
+    // check for correct use
+    if (book == NULL || books_database == NULL) {
+        fprintf(stderr, "ERROR: Invalid arguments to function \"validate_book\"\n");
+        return 1;
+    }
 
     char book_info[150];
 
@@ -214,7 +230,7 @@ int validate_book (Book* book, FILE* books_database) {
         initialize_book(&book_d, book_info);
 
         // make sure the ISBN of the book to be validated in unique
-        if (book_d.ISBN == book->ISBN) {
+        if (strcmp(book_d.ISBN, book->ISBN) == 0) {
             fprintf(stderr, "ERROR: A book with the exact ISBN already exists.\n");
 
             // return 1 for failure
