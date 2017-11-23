@@ -5,6 +5,26 @@
 #include <unistd.h>
 #include "books.h"
 
+char* get_string (void) {
+
+    char* str = NULL;
+    char input, c;
+    int i = 1, j = 0;
+
+    //skip whitespaces
+    while(!isalpha((c = getchar())) && !isdigit((c)));
+    ungetc(c, stdin);
+
+    while((input = getchar()) != '\n') {
+        str = realloc(str, i++ * sizeof(char));
+        str[j++] = input;
+    }
+
+    str[j] = '\0';
+
+    return str;
+}
+
 /*
  * Function:  insert_book
  * --------------------
@@ -171,7 +191,7 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        strcpy(book->author, token);
+        strcpy(book->author, token + 1);
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
@@ -179,7 +199,7 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        strcpy(book->publisher, token);
+        strcpy(book->publisher, token + 1);
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
@@ -187,7 +207,7 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        strcpy(book->ISBN, token);
+        strcpy(book->ISBN, token + 1);
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
@@ -195,7 +215,7 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        strcpy(book->date_of_publication, token);
+        strcpy(book->date_of_publication, token + 1);
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
@@ -220,7 +240,7 @@ int initialize_book (Book* book, char* book_info) {
 
     if (token = strtok(NULL, ",")) {
         token[strlen(token) - 1] = '\0';
-        strcpy(book->category, token);
+        strcpy(book->category, token + 1);
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
@@ -270,3 +290,93 @@ int validate_book (Book* book, FILE* books_database) {
     return 0;
 
 }
+
+/*
+ * Function:  search_book
+ * --------------------
+ * searches for a book in the database file given a part of the book title, author, ISBN, or category.
+ *
+ * Steps for inserting a new book:
+ *  1. Open the database file.
+ *  2. Prompt the user for input.
+ *  3. Read the lead.
+ *  4. Iterate over all books in the database searching for the lead.
+ *  5. Close the database file.
+ *
+ *  returns:
+ *
+ *
+ */
+void search_book (void) {
+
+    /********************************/
+    /** 1. Open the database file. **/
+    /********************************/
+
+    /* open the database file in read/write mode */
+    FILE* books_database = fopen("books.txt", "r");
+
+    /* make sure database file is opened successfully */
+    if (!books_database) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /***********************************/
+    /** 2. Prompt the user for input. **/
+    /***********************************/
+
+    /* prompt the user for input */
+    system("clear");
+    puts("To search for a book, please enter below the book title, author, ISBN, or category.\n\
+Note: To cancel this action type \"exit\" without the double quotes.");
+
+    /***********************/
+    /** 3. Read the lead. **/
+    /***********************/
+    char* lead = get_string();
+
+    /* check for exit */
+    if (strcmp(lead, "exit") == 0) return ;
+
+    /*****************************/
+    /** 4. Search for the lead. **/
+    /*****************************/
+
+    /* declare book_info array to hold the current book's info string */
+    char book_info[150];
+
+    Book book_d;
+
+    printf("Search Results:\n================\n");
+
+    // get all books stored in the database
+    while (fgets(book_info, 150, books_database) != NULL) {
+
+        char tk_book_info[150];          // created a copy of book_info to protect it from the "strtok" function
+        strcpy(tk_book_info, book_info); // in "initialize_book" function
+
+        // initialize the current book in the current iteration with the read book info string
+        initialize_book(&book_d, tk_book_info);
+
+        // check for a match
+        if ((strcmp(lead, book_d.title) == 0) || (strcmp(lead, book_d.author) == 0) || (strcmp(lead, book_d.ISBN) == 0) || (strcmp(lead, book_d.category) == 0)) {
+            printf("%s", book_info);
+        }
+    }
+    sleep(3);
+
+    /*********************************/
+    /** 5. Close the database file. **/
+    /*********************************/
+
+    /* close the database file */
+    if (fclose(books_database) == EOF) {
+        fprintf(stderr, "ERROR: Couldn't close the database.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return ;
+
+}
+

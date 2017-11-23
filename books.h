@@ -60,4 +60,4 @@ int insert_book(void);
 int initialize_book(Book*, char*);
 int validate_book(Book*, FILE*);
 
-int search_book();
+void search_book();
