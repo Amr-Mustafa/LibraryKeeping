@@ -46,7 +46,8 @@ int insert_book (void) {
     /* prompt the user for input */
     system("clear");
     puts("To insert a new book, please enter the book's information as shown in the example below:\n\
-(ex. C How to Program, Paul Deitel, Pearson Education. Inc, 0-13-612356-2, 29/10/2009, 5, 3, Programming)");
+(ex. C How to Program, Paul Deitel, Pearson Education. Inc, 0-13-612356-2, 29/10/2009, 5, 3, Programming)\n\
+Note: To cancel this action type \"exit\" without the double quotes.");
 
     /******************************************/
     /** 3. Read the book information string. **/
@@ -54,6 +55,9 @@ int insert_book (void) {
 
     /* read user input */
     char* book_info = get_book_info();
+
+    /* exit */
+    if (strcmp(book_info, "exit\n") == 0) return EXIT_FAILURE;
 
     /* make sure the get_book_info function returned a valid pointer value */
     if (!book_info) {
@@ -86,7 +90,7 @@ int insert_book (void) {
         fprintf(stderr, "ERROR: A book with the exact ISBN already exists.\n");
         printf("You will be redirected in 3 seconds...\n");
         sleep(3);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     /****************************************************************/
@@ -159,7 +163,6 @@ int initialize_book (Book* book, char* book_info) {
     char* token = NULL;
 
     if (token = strtok(book_info, ",")) {
-        //printf("title: %s\n", token);
         strcpy(book->title, token);
     }
     else {
@@ -168,7 +171,6 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        //printf("author: %s\n", token);
         strcpy(book->author, token);
     }
     else {
@@ -177,7 +179,6 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        //printf("publisher: %s\n", token);
         strcpy(book->publisher, token);
     }
     else {
@@ -194,7 +195,6 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        //printf("date_of_publication: %s\n", token);
         strcpy(book->date_of_publication, token);
     }
     else {
@@ -203,7 +203,6 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        //printf("number_of_copies: %s\n", token);
         book->number_of_copies = (unsigned int) atoi(token);
     }
     else {
@@ -212,7 +211,6 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        //printf("number_of_available_copies: %s\n", token);
         book->number_of_available_copies = (unsigned int) atoi(token);
     }
     else {
@@ -221,7 +219,6 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        //printf("Category: %s\n", token);
         token[strlen(token) - 1] = '\0';
         strcpy(book->category, token);
     }
@@ -260,9 +257,6 @@ int validate_book (Book* book, FILE* books_database) {
 
         // initialize the current book in the current iteration with the read book info string
         initialize_book(&book_d, book_info);
-
-        //printf("%s\n", book->ISBN);
-        //sleep(30);
 
         // make sure the ISBN of the book to be validated in unique
         if (strcmp(book_d.ISBN, book->ISBN) == 0) {

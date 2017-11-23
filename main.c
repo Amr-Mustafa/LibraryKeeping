@@ -5,9 +5,11 @@
 
 void open_main_menu(void);
 void open_book_menu(void);
+
 char get_main_label(void);
-void do_main_label(char);
 char get_book_label (void);
+
+void do_main_label(char);
 void do_book_label(char);
 
 int main() {
@@ -78,14 +80,12 @@ char get_main_label (void) {
     // Store label input.
     char label;
 
-    // Skip whitespaces and read the label.
-    while(!isalpha((label = getchar())));
+    do {
 
-    // Validate input.
-    if (label < 'a' || label > 'g') {
-        fprintf(stderr, "ERROR: Invalid input.\n");
-        exit(EXIT_FAILURE);
-    }
+        // Skip whitespaces and read the label.
+        while(!isalpha((label = getchar())));
+
+    } while (label < 'a' || label > 'g');
 
     // Return the label.
     return label;
@@ -103,14 +103,15 @@ char get_book_label (void) {
     // Store label input.
     char label;
 
-    // Skip whitespaces and read the label.
-    while(!isalpha((label = getchar())));
+    do {
 
-    // Validate input.
-    if (label < 'a' || label > 'f') {
-        fprintf(stderr, "ERROR: Invalid input.\n");
-        exit(EXIT_FAILURE);
-    }
+        // Skip whitespaces and read the label.
+        while(!isalpha((label = getchar())));
+
+    } while (label < 'a' || label > 'f');
+
+    // Return the label.
+    return label;
 
     // Return the label.
     return label;
@@ -119,9 +120,7 @@ char get_book_label (void) {
 /*
  * Function:  do_main_label
  * -------------------------
- * Reads in the label from the user and validate it.
- *
- *  returns: a copy of the label read.
+ * Call a specific function based on the passed label.
  */
 void do_main_label(char label) {
 
@@ -141,15 +140,16 @@ void do_main_label(char label) {
 
         case 'e':
             break;
+
+        default:
+            fprintf(stderr, "ERROR: Invalid argument to function do_main_label.");
     }
 }
 
 /*
  * Function:  do_book_label
  * -------------------------
- * Reads in the label from the user and validate it.
- *
- *  returns: a copy of the label read.
+ * Call a specific function based on the passed label.
  */
 void do_book_label(char label) {
 
@@ -159,6 +159,7 @@ void do_book_label(char label) {
             break;
 
         case 'b':
+            search_book();
             break;
 
         case 'c':
@@ -173,5 +174,8 @@ void do_book_label(char label) {
         case 'f':
             open_main_menu();
             break;
+
+        default:
+            fprintf(stderr, "ERROR: Invalid argument to function do_book_label.");
     }
 }
