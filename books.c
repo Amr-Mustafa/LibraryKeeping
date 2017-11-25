@@ -239,7 +239,7 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        token[strlen(token) - 1] = '\0';
+        //token[strlen(token) - 1] = '\0'; commented unless otherwise
         strcpy(book->category, token + 1);
     }
     else {
@@ -313,7 +313,7 @@ void search_book (void) {
     /** 1. Open the database file. **/
     /********************************/
 
-    /* open the database file in read/write mode */
+    /* open the database file in read mode */
     FILE* books_database = fopen("books.txt", "r");
 
     /* make sure database file is opened successfully */
@@ -428,3 +428,149 @@ Note: To cancel this action type \"exit\" without the double quotes.");
 
 }
 
+/*
+ * Function:  add_new_copies
+ * --------------------
+ * prompts the user for an ISBN and the number of copies to be added and updates the records.
+ *
+ * Steps for inserting a new book:
+ *  1. Open the temporary database file.
+ *  2. Prompt the user for input.
+ *  3. Read the ISBN and number of copies.
+ *  4. Iterate over all books in the database searching for the ISBN.
+ *  5. Update the temporary database file.
+ *  5. Close the temporary database file.
+ *
+ *  returns: 0 on success and 1 on failure and -1 on user exit.
+ *
+ */
+
+int add_new_copies (void) {
+    /************************/
+    /** 1. Open databasse. **/
+    /************************/
+
+    /* open the temporary database file in read mode */
+    FILE* books_database = fopen("books.txt", "r");
+
+    /* make sure database file is opened successfully */
+    if (!books_database) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /* open the intermediate database file in read/write mode */
+    FILE* intermediate_database = fopen("intermediate.txt", "w");
+
+    /* make sure database file is opened successfully */
+    if (!intermediate_database) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /***********************************/
+    /** 2. Prompt the user for input. **/
+    /***********************************/
+
+    /* prompt the user for input */
+    system("clear");
+    puts("To add new copies for an existing book, please enter below the ISBN.\nNote: To cancel this action type \"exit\" without the double quotes.");
+
+    /********************************************/
+    /** 3. Read the ISBN and number of copies. **/
+    /********************************************/
+
+    /* read the ISBN */
+    char* ISBN = get_string();
+
+    /* check for exit */
+    if (strcmp(ISBN, "exit") == 0) return -1;
+
+    /* read the number of copies */
+    puts("Enter below the number of copies to be added.");
+    int num_copies;
+    scanf("%d", &num_copies);
+
+    /************************************************************************************************/
+    /** 4. Search for a book with the read ISBN and copy all others into the intermediate database **/
+    /************************************************************************************************/
+
+    char book_info[150];
+    char book_t[150];
+    char tk_book_info_2[150];
+    Book book_d;
+
+    // get all books stored in the database
+    while (fgets(book_info, 150, books_database)) {
+
+        strcpy(tk_book_info_2, book_info);
+
+        // initialize the current book in the current iteration with the read book info string
+        initialize_book(&book_d, tk_book_info_2);
+
+        // compare the read ISBN with the current book's ISBN
+        if (strcmp(ISBN, book_d.ISBN) != 0) {
+            // if not equal then copy this book to the intermediate database file
+            fputs(book_info, intermediate_database);
+        } else {
+            strcpy(book_t, book_info);
+        }
+    }
+
+    /******************************************************/
+    /** 5. Delete the contents of the temporary database **/
+    /******************************************************/
+
+    // close the temporary database
+    fclose(books_database);
+    fclose(intermediate_database);
+
+    //re-open it in write mode to delete its contents
+    FILE* books_database_N = fopen("books.txt", "w");
+    FILE* intermediate_database_N = fopen("intermediate.txt", "r");
+
+    /* make sure database file is opened successfully */
+    if (!books_database_N) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /* make sure database file is opened successfully */
+    if (!intermediate_database_N) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /************************************************************************************/
+    /** 6. Write the contents of the intermediate database into the temporary database **/
+    /************************************************************************************/
+
+    // get all books stored in the database
+    while (fgets(book_info, 150, intermediate_database_N)) {
+
+        // write them to the empty temporary database
+        fputs(book_info, books_database_N);
+    }
+
+    /************************************************************/
+    /** 7. Write the updated book into the temporary database **/
+    /************************************************************/
+
+    char* ptr = book_t;
+    char final[150];
+
+    /* fill the book structure with book info */
+    char tk_book_info[150];      // created a copy of book_t to protect it from the "strtok" function
+    strcpy(tk_book_info, book_t); // in "initialize_book" function
+
+    initialize_book(&book_d, tk_book_info);
+
+    book_d.number_of_copies = num_copies;
+
+    snprintf(final, 150, "%s, %s, %s, %s, %s, %d, %d, %s", book_d.title, book_d.author, book_d.publisher, book_d.ISBN, book_d.date_of_publication, book_d.number_of_copies, book_d.number_of_available_copies, book_d.category);
+
+    fputs(final, books_database_N);
+
+    fclose(books_database_N);
+    fclose(intermediate_database_N);
+}

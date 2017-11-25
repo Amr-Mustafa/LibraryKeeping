@@ -61,3 +61,4 @@ int initialize_book(Book*, char*);
 int validate_book(Book*, FILE*);
 
 void search_book();
+int add_new_copy();

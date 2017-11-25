@@ -163,6 +163,7 @@ void do_book_label(char label) {
             break;
 
         case 'c':
+            add_new_copies();
             break;
 
         case 'd':
