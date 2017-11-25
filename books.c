@@ -124,8 +124,6 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     }
 
     printf("Book added successfully.\n");
-    printf("You will be redirected in 3 seconds...\n");
-    sleep(3);
 
     /*********************************/
     /** 6. Close the database file. **/
@@ -137,6 +135,8 @@ Note: To cancel this action type \"exit\" without the double quotes.");
         exit(EXIT_FAILURE);
     }
 
+    puts("Press any key to continue...");
+    getchar();
     return EXIT_SUCCESS;
 }
 
@@ -359,12 +359,58 @@ Note: To cancel this action type \"exit\" without the double quotes.");
         // initialize the current book in the current iteration with the read book info string
         initialize_book(&book_d, tk_book_info);
 
-        // check for a match
-        if ((strcmp(lead, book_d.title) == 0) || (strcmp(lead, book_d.author) == 0) || (strcmp(lead, book_d.ISBN) == 0) || (strcmp(lead, book_d.category) == 0)) {
-            printf("%s", book_info);
+        // tokenize the lead if it contains more than one word
+        char tk_lead[50]; // created a copy of lead to protect it from the "strtok" function
+        char tk_lead_2[50];
+        strcpy(tk_lead, lead);
+        strcpy(tk_lead_2, lead);
+        char* token;
+        char* token_cpy;
+        token = strtok(tk_lead, " ");
+        char* save_3 = tk_lead_2;
+        token_cpy = strtok_r(tk_lead_2, " ", &save_3);
+
+        // tokenize the book title if it contains more than one word
+        char tk_book_title[150];
+        strcpy(tk_book_title, book_d.title);
+        char* title_token;
+        char* save = tk_book_title;
+        title_token = strtok_r(tk_book_title, " ", &save);
+
+        // tokenize the book author if it contains more than one word
+        char tk_book_author[150];
+        strcpy(tk_book_author, book_d.author);
+        char* author_token;
+        char* save_2 = tk_book_author;
+        author_token = strtok_r(tk_book_author, " ", &save_2);
+
+        while (token) {
+            while (title_token) {
+
+                // check for a match
+                if ((strcmp(token, title_token) == 0) || (strcmp(lead, book_d.ISBN) == 0) || (strcmp(lead, book_d.category) == 0)) {
+                    printf("%s", book_info);
+                }
+
+                title_token = strtok_r(NULL, " ", &save);
+            }
+            token = strtok(NULL, " ");
+        }
+
+
+        while (token_cpy) {
+            while (author_token) {
+
+                // check for a match
+                if ((strcmp(token_cpy, author_token) == 0)) {
+                    printf("%s", book_info);
+                }
+
+                author_token = strtok_r(NULL, " ", &save_2);
+            }
+            token_cpy = strtok_r(NULL, " ", &save_3);
         }
     }
-    sleep(3);
 
     /*********************************/
     /** 5. Close the database file. **/
@@ -376,6 +422,8 @@ Note: To cancel this action type \"exit\" without the double quotes.");
         exit(EXIT_FAILURE);
     }
 
+    puts("Press any key to continue...");
+    getchar();
     return ;
 
 }
