@@ -5,23 +5,46 @@
 #include <unistd.h>
 #include "books.h"
 
-char* get_string (void) {
+/*
+ * Function:  get_string
+ * --------------------
+ * reads a string of characters from the specified file stream untill \n is encountered.
+ *
+ *  returns: a pointer to a null terminated string on success
+ *           NULL on failure
+ */
 
+char* get_string (FILE* stream) {
+
+    // point to the string allocated for the user input
     char* str = NULL;
-    char input, c;
+
+    // store character input
+    char c;
+
+    // indices
     int i = 1, j = 0;
 
-    //skip whitespaces
-    while(!isalpha((c = getchar())) && !isdigit((c)));
-    ungetc(c, stdin);
+    //skip whitespaces before user input
+    while(!isalpha((c = getc(stream))) && !isdigit((c)));
 
-    while((input = getchar()) != '\n') {
+    // the last digit read is a non-whitespace character so we need to push it again into the stdin
+    ungetc(c, stream);
+
+    // read character and allocate memory for it until \n is encountered
+    while(((c = getc(stream)) != '\n')) {
+
+        // allocate memory for the read character
         str = realloc(str, i++ * sizeof(char));
-        str[j++] = input;
+
+        // add the read character to the string and increment the index
+        str[j++] = c;
     }
 
+    // add the null terminating character to the string
     str[j] = '\0';
 
+    // return a pointer to the read string or NULL
     return str;
 }
 
@@ -39,9 +62,18 @@ char* get_string (void) {
  *  5. Store the book information string in the database file.
  *  6. Close the database file.
  *
- *  returns: EXIT_SUCCESS for success
- *           EXIT_FAILURE for failure
+ *  returns: 0 on success
+ *           1, 2, 3, 4, 5, 6, 7 on failure
  *
+ *           # - Error codes
+ *           ----------------------------------------------
+ *           1 = Error opening/closing a database file
+ *           2 = Error reading the book information string
+ *           3 = User abort
+ *           4 = Error allocating memory
+ *           5 = Invalid book information (duplicated ISBN)
+ *           6 = Error updating database file
+ *           7 = Error processing book info string
  */
 
 int insert_book (void) {
@@ -50,13 +82,15 @@ int insert_book (void) {
     /** 1. Open the database file. **/
     /********************************/
 
-    /* open the database file in read/write mode */
+    /* open database file in read/write mode */
     FILE* books_database = fopen("books.txt", "r+");
 
-    /* make sure database file is opened successfully */
+    /* make sure database file opened successfully */
     if (!books_database) {
         fprintf(stderr, "ERROR: Couldn't open the database file.\n");
-        exit(EXIT_FAILURE);
+        puts("Enter any character to continue...");
+        getchar();
+        return 1;
     }
 
     /***********************************/
@@ -74,16 +108,20 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     /******************************************/
 
     /* read user input */
-    char* book_info = get_book_info();
+    char* book_info = get_string(stdin);
 
-    /* exit */
-    if (strcmp(book_info, "exit\n") == 0) return EXIT_FAILURE;
-
-    /* make sure the get_book_info function returned a valid pointer value */
+    /* make sure the get_string function returned a valid pointer value */
     if (!book_info) {
         fprintf(stderr, "ERROR: Couldn't read the book info.\n");
-        exit(EXIT_FAILURE);
+        puts("Enter any character to continue...");
+        getchar();
+        return 2;
     }
+
+    /* exit */
+    if (strcmp(book_info, "exit") == 0) return 3;
+
+
 
     /******************************************/
     /** 4. Validate book information string. **/
@@ -95,7 +133,9 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     /* make sure the allocation was performed successfully */
     if (!book) {
         fprintf(stderr, "ERROR: Not enough memory.\n");
-        exit(EXIT_FAILURE);
+        puts("Enter any character to continue...");
+        getchar();
+        return 4;
     }
 
     /* fill the book structure with book info read */
@@ -103,14 +143,19 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     char tk_book_info[150];          // created a copy of book_info to protect it from the "strtok" function
     strcpy(tk_book_info, book_info); // in "initialize_book" function
 
-    initialize_book(book, tk_book_info);
+    if (initialize_book(book, tk_book_info)) {
+        // couldn't process book info string
+        puts("Enter any character to continue...");
+        getchar();
+        return 7;
+    }
 
     /* validate the read book */
     if (validate_book(book, books_database) == 1) {
         fprintf(stderr, "ERROR: A book with the exact ISBN already exists.\n");
-        printf("You will be redirected in 3 seconds...\n");
-        sleep(3);
-        return EXIT_FAILURE;
+        puts("Enter any character to continue...");
+        getchar();
+        return 5;
     }
 
     /****************************************************************/
@@ -120,8 +165,13 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     /* store book in database */
     if(!fputs(book_info, books_database)) {
         fprintf(stderr, "ERROR: Couldn't add the book.\n");
-        exit(EXIT_FAILURE);
+        puts("Enter any character to continue...");
+        getchar();
+        return 6;
     }
+
+    /* add a newline to the database */
+    fprintf(books_database, "\n");
 
     printf("Book added successfully.\n");
 
@@ -132,39 +182,14 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     /* close the database file */
     if (fclose(books_database) == EOF) {
         fprintf(stderr, "ERROR: Couldn't close the database.\n");
-        exit(EXIT_FAILURE);
+        puts("Enter any character to continue...");
+        getchar();
+        return 1;
     }
 
     puts("Press any key to continue...");
     getchar();
-    return EXIT_SUCCESS;
-}
-
-/*
- * Function:  get_book_info
- * --------------------
- * reads in a string of book information from the user.
- *
- *  returns: a pointer to the read string.
- *
- */
-
-char* get_book_info (void) {
-
-    // allocate enough memory to store the book info string
-    char* book_info = (char*) malloc(sizeof(char) * 150);
-
-    // skip whitespaces and read the label
-    char c;
-    while(!isalpha(c = getchar()));
-    ungetc(c, stdin);
-
-    // read user input
-    fgets(book_info, 150, stdin);
-
-    // return a pointer to the book info string
-    return book_info;
-
+    return 0;
 }
 
 /*
@@ -172,14 +197,14 @@ char* get_book_info (void) {
  * --------------------
  * fills a given Book struct with the appropriate values for each member from a given book info string.
  *
- *  returns: EXIT_SUCCESS on success
- *           EXIT_FAILURE on failure
+ *  returns: 0 on success
+ *           1 on failure
  *
  */
 
 int initialize_book (Book* book, char* book_info) {
 
-    // We need a pointer to handle the token.
+    // we need a pointer to handle the token
     char* token = NULL;
 
     if (token = strtok(book_info, ",")) {
@@ -187,7 +212,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -195,7 +220,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -203,7 +228,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -211,7 +236,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -219,7 +244,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -227,7 +252,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -235,7 +260,7 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     if (token = strtok(NULL, ",")) {
@@ -244,16 +269,16 @@ int initialize_book (Book* book, char* book_info) {
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
-    return EXIT_SUCCESS;
+    return 0;
 }
 
 /*
  * Function:  validate_book
  * --------------------
- * validates a given book.
+ * given a book and a database file, it checks whether the book's ISBN is unique or not.
  *
  *  returns: 0 on success
  *           1 on failure
@@ -307,7 +332,7 @@ int validate_book (Book* book, FILE* books_database) {
  *
  *
  */
-void search_book (void) {
+int search_book (void) {
 
     /********************************/
     /** 1. Open the database file. **/
@@ -319,7 +344,7 @@ void search_book (void) {
     /* make sure database file is opened successfully */
     if (!books_database) {
         fprintf(stderr, "ERROR: Couldn't open the database file.\n");
-        exit(EXIT_FAILURE);
+        return 1;
     }
 
     /***********************************/
@@ -334,10 +359,10 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     /***********************/
     /** 3. Read the lead. **/
     /***********************/
-    char* lead = get_string();
+    char* lead = get_string(stdin);
 
     /* check for exit */
-    if (strcmp(lead, "exit") == 0) return ;
+    if (strcmp(lead, "exit") == 0) return 2;
 
     /*****************************/
     /** 4. Search for the lead. **/
@@ -351,7 +376,7 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     printf("Search Results:\n================\n");
 
     // get all books stored in the database
-    while (fgets(book_info, 150, books_database) != NULL) {
+    while (fgets(book_info, 150, books_database)) {
 
         char tk_book_info[150];          // created a copy of book_info to protect it from the "strtok" function
         strcpy(tk_book_info, book_info); // in "initialize_book" function
@@ -359,57 +384,61 @@ Note: To cancel this action type \"exit\" without the double quotes.");
         // initialize the current book in the current iteration with the read book info string
         initialize_book(&book_d, tk_book_info);
 
-        // tokenize the lead if it contains more than one word
-        char tk_lead[50]; // created a copy of lead to protect it from the "strtok" function
-        char tk_lead_2[50];
-        strcpy(tk_lead, lead);
-        strcpy(tk_lead_2, lead);
-        char* token;
-        char* token_cpy;
-        token = strtok(tk_lead, " ");
-        char* save_3 = tk_lead_2;
-        token_cpy = strtok_r(tk_lead_2, " ", &save_3);
+        /* search with the ISBN */
+        if (strcmp(lead, book_d.ISBN) == 0) printf("%s", book_info);
 
-        // tokenize the book title if it contains more than one word
+        /* tokenize the lead if it contains more than one word */
+        char tk_lead[50]; // created a copy of lead to protect it from the "strtok" function
+        strcpy(tk_lead, lead);
+        char* token;
+        char* save_tk_lead = tk_lead;
+        token = strtok_r(tk_lead, " ", &save_tk_lead);
+
+        /* tokenize the category */
+        char tk_book_cat[50];
+        strcpy(tk_book_cat, book_d.category);
+        char* category_token;
+        char* save_cat = tk_book_cat;
+        category_token = strtok_r(tk_book_cat, " ", &save_cat);
+        category_token = strtok(category_token, "\n");
+
+
+        /* tokenize the book title if it contains more than one word */
         char tk_book_title[150];
         strcpy(tk_book_title, book_d.title);
         char* title_token;
-        char* save = tk_book_title;
-        title_token = strtok_r(tk_book_title, " ", &save);
+        char* save_title = tk_book_title;
+        title_token = strtok_r(tk_book_title, " ", &save_title);
 
-        // tokenize the book author if it contains more than one word
+        /* tokenize the book author if it contains more than one word */
         char tk_book_author[150];
         strcpy(tk_book_author, book_d.author);
         char* author_token;
-        char* save_2 = tk_book_author;
-        author_token = strtok_r(tk_book_author, " ", &save_2);
+        char* save_author = tk_book_author;
+        author_token = strtok_r(tk_book_author, " ", &save_author);
+
+        // check whether the lead is one word or more
+        token = strtok_r(NULL, " ", &save_tk_lead);
+        token == NULL ? token = lead : NULL;
 
         while (token) {
-            while (title_token) {
 
+            while (title_token || author_token || category_token) {
                 // check for a match
-                if ((strcmp(token, title_token) == 0) || (strcmp(lead, book_d.ISBN) == 0) || (strcmp(lead, book_d.category) == 0)) {
+                if ((title_token != NULL ? (strcmp(token, title_token) == 0) : 0) || (category_token != NULL ? (strcmp(token, category_token) == 0) : 0) || (author_token != NULL ? (strcmp(token, author_token) == 0) : 0)) {
                     printf("%s", book_info);
                 }
 
-                title_token = strtok_r(NULL, " ", &save);
+                // get the next token
+                title_token = strtok_r(NULL, " ", &save_title);
+                author_token = strtok_r(NULL, " ", &save_author);
+                category_token = strtok_r(NULL, " ", &save_cat);
+                category_token = strtok(category_token, "\n");
             }
-            token = strtok(NULL, " ");
+
+            strcmp(token, lead) == 0 ? (token = NULL) : (token = strtok_r(NULL, " ", &save_tk_lead));
         }
 
-
-        while (token_cpy) {
-            while (author_token) {
-
-                // check for a match
-                if ((strcmp(token_cpy, author_token) == 0)) {
-                    printf("%s", book_info);
-                }
-
-                author_token = strtok_r(NULL, " ", &save_2);
-            }
-            token_cpy = strtok_r(NULL, " ", &save_3);
-        }
     }
 
     /*********************************/
@@ -424,7 +453,7 @@ Note: To cancel this action type \"exit\" without the double quotes.");
 
     puts("Press any key to continue...");
     getchar();
-    return ;
+    return 0;
 
 }
 
@@ -481,15 +510,17 @@ int add_new_copies (void) {
     /********************************************/
 
     /* read the ISBN */
-    char* ISBN = get_string();
+    char* ISBN = get_string(stdin);
 
     /* check for exit */
     if (strcmp(ISBN, "exit") == 0) return -1;
 
     /* read the number of copies */
-    puts("Enter below the number of copies to be added.");
     int num_copies;
-    scanf("%d", &num_copies);
+    do {
+        puts("Enter below the number of copies to be added.");
+        scanf("%d", &num_copies);
+    } while (num_copies < 1);
 
     /************************************************************************************************/
     /** 4. Search for a book with the read ISBN and copy all others into the intermediate database **/
@@ -498,7 +529,34 @@ int add_new_copies (void) {
     char book_info[150];
     char book_t[150];
     char tk_book_info_2[150];
+    char tk_book_info_3[150];
     Book book_d;
+    int found = 0;
+
+    // make sure there exits a book with the given ISBN
+    while (fgets(book_info, 150, books_database)) {
+
+        strcpy(tk_book_info_3, book_info);
+
+        // initialize the current book in the current iteration with the read book info string
+        initialize_book(&book_d, tk_book_info_3);
+
+        // compare the read ISBN with the current book's ISBN
+        if (strcmp(ISBN, book_d.ISBN) == 0) {
+            found = 1;
+            break; // found
+        }
+    }
+
+    if (found == 0) {
+        fprintf(stderr, "ERROR: No book with the given ISBN could be found.\n");
+        getchar();
+        puts("Press any key to continue...");
+        getchar();
+        return 2;
+    }
+
+    rewind(books_database);
 
     // get all books stored in the database
     while (fgets(book_info, 150, books_database)) {
@@ -565,12 +623,22 @@ int add_new_copies (void) {
 
     initialize_book(&book_d, tk_book_info);
 
-    book_d.number_of_copies = num_copies;
+    book_d.number_of_copies += num_copies;
 
     snprintf(final, 150, "%s, %s, %s, %s, %s, %d, %d, %s", book_d.title, book_d.author, book_d.publisher, book_d.ISBN, book_d.date_of_publication, book_d.number_of_copies, book_d.number_of_available_copies, book_d.category);
 
     fputs(final, books_database_N);
 
+    /****************************/
+    /** 8. Close all databases **/
+    /****************************/
     fclose(books_database_N);
-    fclose(intermediate_database_N);
+
+    // delete the intermediate file
+    remove("intermediate.txt");
+
+    getchar();
+    puts("Press any key to continue...");
+    getchar();
+    return 0;
 }
