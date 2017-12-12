@@ -151,8 +151,34 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     }
 
     /* validate the read book */
-    if (validate_book(book, books_database) == 1) {
+    int res = validate_book(book, books_database);
+    if (res == 1) {
         fprintf(stderr, "ERROR: A book with the exact ISBN already exists.\n");
+        puts("Enter any character to continue...");
+        getchar();
+        return 5;
+    } else if (res == 2) {
+        fprintf(stderr, "ERROR: Invalid author name.\n");
+        puts("Enter any character to continue...");
+        getchar();
+        return 5;
+    } else if (res == 3) {
+        fprintf(stderr, "ERROR: Invalid number of [available] copies.\n");
+        puts("Enter any character to continue...");
+        getchar();
+        return 5;
+    } else if (res == 4) {
+        fprintf(stderr, "ERROR: Invalid book category.\n");
+        puts("Enter any character to continue...");
+        getchar();
+        return 5;
+    } else if (res == 5) {
+        fprintf(stderr, "ERROR: Invalid date of publication.\n");
+        puts("Enter any character to continue...");
+        getchar();
+        return 5;
+    } else if (res == 6) {
+        fprintf(stderr, "ERROR: Invalid ISBN.\n");
         puts("Enter any character to continue...");
         getchar();
         return 5;
@@ -179,13 +205,15 @@ Note: To cancel this action type \"exit\" without the double quotes.");
     /** 6. Close the database file. **/
     /*********************************/
 
-    /* close the database file */
+    /* close the database file and free any allocated memory*/
     if (fclose(books_database) == EOF) {
         fprintf(stderr, "ERROR: Couldn't close the database.\n");
         puts("Enter any character to continue...");
         getchar();
         return 1;
     }
+
+    free(book);
 
     puts("Press any key to continue...");
     getchar();
@@ -240,7 +268,17 @@ int initialize_book (Book* book, char* book_info) {
     }
 
     if (token = strtok(NULL, ",")) {
-        strcpy(book->date_of_publication, token + 1);
+        char* date_token = token + 1;
+        char* save_ptr = date_token;
+
+        date_token = strtok_r(date_token, "/", &save_ptr);
+        book->date_of_publication.day = atoi(date_token);
+
+        date_token = strtok_r(NULL, "/", &save_ptr);
+        book->date_of_publication.month = atoi(date_token);
+
+        date_token = strtok_r(NULL, "/", &save_ptr);
+        book->date_of_publication.year = atoi(date_token);
     }
     else {
         fprintf(stderr, "ERROR: Couldn't process the book info.\n");
@@ -281,8 +319,16 @@ int initialize_book (Book* book, char* book_info) {
  * given a book and a database file, it checks whether the book's ISBN is unique or not.
  *
  *  returns: 0 on success
- *           1 on failure
+ *           1,2 on failure
  *
+ *           # - Error codes
+ *           ----------------------------------------------
+ *           1 = Duplicated ISBN
+ *           2 = Invalid author
+ *           3 = Invalid number of copies/available copies
+ *           4 = Invalid category
+ *           5 = Invalid date
+ *           6 = Invalid ISBN
  */
 
 int validate_book (Book* book, FILE* books_database) {
@@ -297,6 +343,35 @@ int validate_book (Book* book, FILE* books_database) {
 
     Book book_d;
 
+
+    // check author name
+    char* chk = book->author;
+    while(*chk != '\0') {
+        if (isalpha(*chk) || *chk == ' ' || *chk == '\n' || *chk == '&') chk++;
+        else return 2;
+    }
+
+    // check number of copies & number of available copies
+    if (book->number_of_copies < 1 || book->number_of_available_copies < 1) {
+        return 3;
+    }
+
+    // check category
+    chk = book->category;
+    while(*chk != '\0') {
+        if (isalpha(*chk) || *chk == ' ' || *chk == '\n') chk++;
+        else return 4;
+    }
+
+    // check date
+    if (book->date_of_publication.day < 1 || book->date_of_publication.day > 31) return 5;
+    if (book->date_of_publication.month < 1 || book->date_of_publication.month > 12) return 5;
+    if (book->date_of_publication.year < 1 || book->date_of_publication.year > 2017) return 5;
+
+    // check ISBN
+    if (strlen(book->ISBN) != 13) return 6;
+
+    // check ISBN uniqueness
     // get all books stored in the database
     while (fgets(book_info, 150, books_database)) {
 
@@ -549,6 +624,8 @@ int add_new_copies (void) {
     }
 
     if (found == 0) {
+        // delete the intermediate file
+        remove("intermediate.txt");
         fprintf(stderr, "ERROR: No book with the given ISBN could be found.\n");
         getchar();
         puts("Press any key to continue...");
@@ -625,7 +702,7 @@ int add_new_copies (void) {
 
     book_d.number_of_copies += num_copies;
 
-    snprintf(final, 150, "%s, %s, %s, %s, %s, %d, %d, %s", book_d.title, book_d.author, book_d.publisher, book_d.ISBN, book_d.date_of_publication, book_d.number_of_copies, book_d.number_of_available_copies, book_d.category);
+    snprintf(final, 150, "%s, %s, %s, %s, %d/%d/%d, %d, %d, %s", book_d.title, book_d.author, book_d.publisher, book_d.ISBN, book_d.date_of_publication.day, book_d.date_of_publication.month, book_d.date_of_publication.year, book_d.number_of_copies, book_d.number_of_available_copies, book_d.category);
 
     fputs(final, books_database_N);
 
@@ -638,6 +715,153 @@ int add_new_copies (void) {
     remove("intermediate.txt");
 
     getchar();
+    puts("Book updated successfully.");
+    puts("Press any key to continue...");
+    getchar();
+    return 0;
+
+}
+
+int delete_book (void) {
+    /************************/
+    /** 1. Open databasse. **/
+    /************************/
+
+    /* open the temporary database file in read mode */
+    FILE* books_database = fopen("books.txt", "r");
+
+    /* make sure database file is opened successfully */
+    if (!books_database) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /* open the intermediate database file in read/write mode */
+    FILE* intermediate_database = fopen("intermediate.txt", "w");
+
+    /* make sure intermediate database file is opened successfully */
+    if (!intermediate_database) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /***********************************/
+    /** 2. Prompt the user for input. **/
+    /***********************************/
+
+    /* prompt the user for input */
+    system("clear");
+    puts("To delete an existing book, please enter below the ISBN.\nNote: To cancel this action type \"exit\" without the double quotes.");
+
+    /********************************************/
+    /** 3. Read the ISBN and number of copies. **/
+    /********************************************/
+
+    /* read the ISBN */
+    char* ISBN = get_string(stdin);
+
+    /* check for exit */
+    if (strcmp(ISBN, "exit") == 0) return -1;
+
+    /************************************************************************************************/
+    /** 4. Search for a book with the read ISBN and copy all others into the intermediate database **/
+    /************************************************************************************************/
+
+    char book_info[150];
+    char book_t[150];
+    char tk_book_info_2[150];
+    char tk_book_info_3[150];
+    Book book_d;
+    int found = 0;
+
+    // make sure there exits a book with the given ISBN
+    while (fgets(book_info, 150, books_database)) {
+
+        strcpy(tk_book_info_3, book_info);
+
+        // initialize the current book in the current iteration with the read book info string
+        initialize_book(&book_d, tk_book_info_3);
+
+        // compare the read ISBN with the current book's ISBN
+        if (strcmp(ISBN, book_d.ISBN) == 0) {
+            found = 1;
+            break; // found
+        }
+    }
+
+    if (found == 0) {
+        // delete the intermediate file
+        remove("intermediate.txt");
+
+        fprintf(stderr, "ERROR: No book with the given ISBN could be found.\n");
+        puts("Press any key to continue...");
+        getchar();
+        return 2;
+    }
+
+    rewind(books_database);
+
+    // get all books stored in the database
+    while (fgets(book_info, 150, books_database)) {
+
+        strcpy(tk_book_info_2, book_info);
+
+        // initialize the current book in the current iteration with the read book info string
+        initialize_book(&book_d, tk_book_info_2);
+
+        // compare the read ISBN with the current book's ISBN
+        if (strcmp(ISBN, book_d.ISBN) != 0) {
+            // if not equal then copy this book to the intermediate database file
+            fputs(book_info, intermediate_database);
+        } else {
+            strcpy(book_t, book_info);
+        }
+    }
+
+    /******************************************************/
+    /** 5. Delete the contents of the temporary database **/
+    /******************************************************/
+
+    // close the temporary database
+    fclose(books_database);
+    fclose(intermediate_database);
+
+    //re-open it in write mode to delete its contents
+    FILE* books_database_N = fopen("books.txt", "w");
+    FILE* intermediate_database_N = fopen("intermediate.txt", "r");
+
+    /* make sure database file is opened successfully */
+    if (!books_database_N) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /* make sure database file is opened successfully */
+    if (!intermediate_database_N) {
+        fprintf(stderr, "ERROR: Couldn't open the database file.\n");
+        return 1;
+    }
+
+    /************************************************************************************/
+    /** 6. Write the contents of the intermediate database into the temporary database **/
+    /************************************************************************************/
+
+    // get all books stored in the database
+    while (fgets(book_info, 150, intermediate_database_N)) {
+
+        // write them to the empty temporary database
+        fputs(book_info, books_database_N);
+    }
+
+    /****************************/
+    /** 8. Close all databases **/
+    /****************************/
+    fclose(books_database_N);
+
+    // delete the intermediate file
+    remove("intermediate.txt");
+
+    puts("Book deleted successfully.");
     puts("Press any key to continue...");
     getchar();
     return 0;

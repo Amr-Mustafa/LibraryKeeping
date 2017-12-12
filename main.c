@@ -2,15 +2,20 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "books.h"
+#include "members.h"
+#include <unistd.h>
 
 void open_main_menu(void);
 void open_book_menu(void);
+void open_members_menu(void);
 
 char get_main_label(void);
-char get_book_label (void);
+char get_book_label(void);
+char get_members_label(void);
 
 void do_main_label(char);
 void do_book_label(char);
+void do_members_label(char);
 
 int main() {
 
@@ -23,8 +28,8 @@ int main() {
 void open_main_menu() {
 
     while(1) {
-        // clear the screen
-        system("clear");
+        // clc the screen
+        system("clc||clear");
 
         // show main menu
         printf("To choose an option, enter its letter label:\n\
@@ -48,8 +53,8 @@ void open_main_menu() {
 void open_book_menu() {
 
     while(1) {
-        // clear the screen
-        system("clear");
+        // clc the screen
+        system("clc");
 
         // show book menu
         printf("To choose an option, enter its letter label:\n\
@@ -65,6 +70,26 @@ void open_book_menu() {
 
         // respond accordingly
         do_book_label(label);
+    }
+}
+
+void open_members_menu() {
+
+    while(1) {
+        // clc the screen
+        system("clc");
+
+        // show book menu
+        printf("To choose an option, enter its letter label:\n\
+        a) Register member\n\
+        b) Remove member\n\
+        c) <-- back\n");
+
+        // wait for user input
+        char label = get_members_label();
+
+        // respond accordingly
+        do_members_label(label);
     }
 }
 
@@ -130,6 +155,7 @@ void do_main_label(char label) {
             break;
 
         case 'b':
+            open_members_menu();
             break;
 
         case 'c':
@@ -167,6 +193,7 @@ void do_book_label(char label) {
             break;
 
         case 'd':
+            delete_book();
             break;
 
         case 'e':
@@ -178,5 +205,56 @@ void do_book_label(char label) {
 
         default:
             fprintf(stderr, "ERROR: Invalid argument to function do_book_label.");
+    }
+}
+
+/*
+ * Function:  get_members_label
+ * -------------------------
+ * Reads in the label from the user and validate it.
+ *
+ *  returns: a copy of the label read.
+ */
+char get_members_label (void) {
+
+    // Store label input.
+    char label;
+
+    do {
+
+        // Skip whitespaces and read the label.
+        while(!isalpha((label = getchar())));
+
+    } while (label < 'a' || label > 'c');
+
+    // Return the label.
+    return label;
+
+    // Return the label.
+    return label;
+}
+
+/*
+ * Function:  do_members_label
+ * -------------------------
+ * Call a specific function based on the passed label.
+ */
+void do_members_label(char label) {
+
+    switch (label) {
+        case 'a':
+            register_member();
+            break;
+
+        case 'b':
+            //remove_member();
+            break;
+
+        case 'c':
+            open_main_menu();
+            break;
+
+        default:
+            fprintf(stderr, "ERROR: Invalid argument to function do_members_label.");
     }
 }
